@@ -41,6 +41,8 @@ open class LocationNode: SCNNode {
     ///at regular intervals. You can do this with `SceneLocationView`'s `updatePositionOfLocationNode`.
     public var continuallyUpdatePositionAndScale = true
     
+    public var lastNodeUpdate = 0.0
+    
     public init(location: CLLocation?) {
         self.location = location
         self.locationConfirmed = location != nil
@@ -53,10 +55,6 @@ open class LocationNode: SCNNode {
 }
 
 open class LocationAnnotationNode: LocationNode {
-    ///An image to use for the annotation
-    ///When viewed from a distance, the annotation will be seen at the size provided
-    ///e.g. if the size is 100x100px, the annotation will take up approx 100x100 points on screen.
-    public let image: UIImage
     
     public let titlePlace: String?
     
@@ -71,8 +69,7 @@ open class LocationAnnotationNode: LocationNode {
     ///For landmarks in the distance, the default is correct
     public var scaleRelativeToDistance = false
     
-    public init(location: CLLocation?, image: UIImage, titlePlace: String?) {
-        self.image = image
+    public init(location: CLLocation?, titlePlace: String?) {
         self.titlePlace = titlePlace
         
         self.annotationNode = SCNNode()

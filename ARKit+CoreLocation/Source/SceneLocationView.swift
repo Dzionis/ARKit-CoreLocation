@@ -16,6 +16,7 @@ public protocol SceneLocationViewDelegate: class {
     func sceneLocationViewDidAddSceneLocationEstimate(sceneLocationView: SceneLocationView, position: SCNVector3, location: CLLocation)
     func sceneLocationViewDidRemoveSceneLocationEstimate(sceneLocationView: SceneLocationView, position: SCNVector3, location: CLLocation)
     
+    
     ///After a node's location is initially set based on current location,
     ///it is later confirmed once the user moves far enough away from it.
     ///This update uses location data collected since the node was placed to give a more accurate location.
@@ -57,6 +58,8 @@ public class SceneLocationView: ARSCNView, ARSCNViewDelegate {
     private(set) var locationNodes = [LocationNode]()
     
     private var sceneLocationEstimates = [SceneLocationEstimate]()
+    
+    private let nodeUpdateInterval = 2.0
     
     public private(set) var sceneNode: SCNNode? {
         didSet {
@@ -347,6 +350,11 @@ public class SceneLocationView: ARSCNView, ARSCNViewDelegate {
     }
     
     public func updatePositionAndScaleOfLocationNode(locationNode: LocationNode, initialSetup: Bool = false, animated: Bool = false, duration: TimeInterval = 0.1) {
+        let currentDate = Date().timeIntervalSince1970
+        guard currentDate - locationNode.lastNodeUpdate > nodeUpdateInterval else {
+            return
+        }
+        locationNode.lastNodeUpdate = currentDate
         guard let currentPosition = currentScenePosition(),
             let currentLocation = currentLocation() else {
             return
@@ -428,8 +436,6 @@ public class SceneLocationView: ARSCNView, ARSCNViewDelegate {
                 }
                 
                 annotationNode.annotationNode.scale = SCNVector3(x: scale, y: scale, z: scale)
-//                annotationNode.textNode.scale = SCNVector3(x: scale, y: scale, z: scale)
-//                annotationNode.textNode.position = SCNVector3(0.0, Float((annotationNode.textNode.geometry as! SCNPlane).height / 2.0 + (annotationNode.annotationNode.geometry as! SCNPlane).height / 2.0), 0.0)
             }
             
             annotationNode.pivot = SCNMatrix4MakeTranslation(0, -1.1 * scale, 0)
@@ -491,6 +497,8 @@ public class SceneLocationView: ARSCNView, ARSCNViewDelegate {
             print("camera did change tracking state: normal")
         case .notAvailable:
             print("camera did change tracking state: not available")
+        case .limited(.relocalizing):
+            print("camera did change tracking state: limited")
         }
     }
 }

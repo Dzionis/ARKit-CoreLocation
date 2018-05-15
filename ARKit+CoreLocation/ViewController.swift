@@ -58,9 +58,6 @@ class ViewController: UIViewController, MKMapViewDelegate, SceneLocationViewDele
         
         //Set to true to display an arrow which points north.
         //Checkout the comments in the property description and on the readme on this.
-//        sceneLocationView.orientToTrueNorth = false
-        
-//        sceneLocationView.locationEstimateMethod = .coreLocationDataOnly
         sceneLocationView.showAxesNode = true
         sceneLocationView.locationDelegate = self
         
@@ -78,27 +75,13 @@ class ViewController: UIViewController, MKMapViewDelegate, SceneLocationViewDele
                     for var dictinary in jsonResult {
                         let pinCenterCoordinate = CLLocationCoordinate2D(latitude: dictinary["latitude"] as! CLLocationDegrees, longitude: dictinary["longitude"] as! CLLocationDegrees)
                         let pinCenterLocation = CLLocation(coordinate: pinCenterCoordinate, altitude: dictinary["altitude"] as! CLLocationDegrees)
-                        let pinCenterImage = UIImage(named: dictinary["pinImage"] as! String)!
-                        let pinCenterLocationNode = LocationAnnotationNode(location: pinCenterLocation, image: pinCenterImage, titlePlace: dictinary["name"] as? String)
+                        let pinCenterLocationNode = LocationAnnotationNode(location: pinCenterLocation, titlePlace: dictinary["name"] as? String)
                         sceneLocationView.addLocationNodeWithConfirmedLocation(locationNode: pinCenterLocationNode)
                     }
                 }
             } catch {
             }
         }
-        
-//        let pinCenterCoordinate = CLLocationCoordinate2D(latitude: 53.888154, longitude: 27.544086)
-//        let pinCenterLocation = CLLocation(coordinate: pinCenterCoordinate, altitude: 170)
-//        let pinCenterImage = UIImage(named: "pin")!
-//        let pinCenterLocationNode = LocationAnnotationNode(location: pinCenterLocation, image: pinCenterImage, titlePlace: "Titan")
-//        sceneLocationView.addLocationNodeWithConfirmedLocation(locationNode: pinCenterLocationNode)
-//        
-//        //53.886454, 27.534621
-//        let pinCoordinate = CLLocationCoordinate2D(latitude: 53.886454, longitude: 27.534621)
-//        let pinLocation = CLLocation(coordinate: pinCoordinate, altitude: 230)
-//        let pinImage = UIImage(named: "circle")!
-//        let pinLocationNode = LocationAnnotationNode(location: pinLocation, image: pinImage, titlePlace: "BelMed")
-//        sceneLocationView.addLocationNodeWithConfirmedLocation(locationNode: pinLocationNode)
         
         view.addSubview(sceneLocationView)
         
@@ -130,6 +113,51 @@ class ViewController: UIViewController, MKMapViewDelegate, SceneLocationViewDele
         DDLogDebug("pause")
         // Pause the view's session
         sceneLocationView.pause()
+    }
+    
+    private var searchDone = false
+    
+    func updateListOfLocations() {
+        if let currentLocation = sceneLocationView.currentLocation(), !searchDone {
+            for node in sceneLocationView.locationNodes {
+                sceneLocationView.removeLocationNode(locationNode: node)
+            }
+            // Get name of street of bar start
+            let request = MKLocalSearchRequest()
+            request.naturalLanguageQuery = "Bar"
+            let radiusForSearch = 3000.0
+            request.region = MKCoordinateRegionMakeWithDistance(currentLocation.coordinate,
+                                                                radiusForSearch, radiusForSearch)
+            
+            
+            let search = MKLocalSearch(request: request)
+            
+            search.start(completionHandler: {(response, error) in
+                
+                if error != nil {
+                    print("Error occured in search:")
+                } else if response!.mapItems.count == 0 {
+                    print("No matches found")
+                } else {
+                    print("Matches found")
+                    self.searchDone = true
+                    for item in response!.mapItems {
+                        if self.sceneLocationView.locationNodes.count > 20 {
+                            break
+                        }
+                        
+                        let pinCenterCoordinate = item.placemark.coordinate
+                        let pinCenterLocation = CLLocation(coordinate: pinCenterCoordinate, altitude: currentLocation.altitude)
+                        if pinCenterLocation.distance(from: currentLocation) > radiusForSearch {
+                            continue
+                        }
+                        let pinCenterLocationNode = LocationAnnotationNode(location: pinCenterLocation, titlePlace: item.name)
+                        self.sceneLocationView.addLocationNodeWithConfirmedLocation(locationNode: pinCenterLocationNode)
+                        print("Name = \(String(describing: item.name))")
+                    }
+                }
+            })
+        }
     }
     
     override func viewDidLayoutSubviews() {
@@ -247,6 +275,7 @@ class ViewController: UIViewController, MKMapViewDelegate, SceneLocationViewDele
         if let hour = comp.hour, let minute = comp.minute, let second = comp.second, let nanosecond = comp.nanosecond {
             infoLabel.text!.append("\(String(format: "%02d", hour)):\(String(format: "%02d", minute)):\(String(format: "%02d", second)):\(String(format: "%03d", nanosecond / 1000000))")
         }
+        updateListOfLocations()
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -274,15 +303,6 @@ class ViewController: UIViewController, MKMapViewDelegate, SceneLocationViewDele
                             DDLogDebug("distance: \(distance)")
                         }
                     }
-//                    let location = touch.location(in: self.sceneLocationView)
-//
-//                    if location.x <= 40 && adjustNorthByTappingSidesOfScreen {
-//                        print("left side of the screen")
-//                        sceneLocationView.moveSceneHeadingAntiClockwise()
-//                    } else if location.x >= view.frame.size.width - 40 && adjustNorthByTappingSidesOfScreen {
-//                        print("right side of the screen")
-//                        sceneLocationView.moveSceneHeadingClockwise()
-//                    }
                 }
             }
         }
